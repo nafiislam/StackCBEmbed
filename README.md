@@ -18,8 +18,6 @@ We introduced 'StackCBEmbed,' a computational sequence-based ensemble model, to 
 **Machine Learning based library :** Scikitlearn 1.2.2 <br />
 **IDE for python :** PyCharm 2023.3.2 <br />
 **All libraries :** xgboost==2.0.3
-scops==0.9.0
-pickle5==0.0.11
 scikit-learn==1.2.2
 numpy==1.26.2
 pandas==2.1.4
