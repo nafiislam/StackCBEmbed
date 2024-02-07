@@ -1,10 +1,8 @@
 xgboost==2.0.3
-scops
-pickle5
+pickle5==0.0.11
 scikit-learn==1.2.2
-numpy
-pandas
-matplotlib
-PyQt5
-skops==0.9.0
+numpy==1.26.2
+pandas==2.1.4
+matplotlib==3.8.2
+PyQt5==5.15.10
 imblearn==0.0
