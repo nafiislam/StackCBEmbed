@@ -21,7 +21,7 @@ We introduced 'StackCBEmbed,' a computational sequence-based ensemble model, to 
 scikit-learn==1.2.2
 numpy==1.26.2
 pandas==2.1.4
-matplotlib
+matplotlib==3.8.2
 PyQt5==5.15.10
 imblearn==0.0
 <br />
