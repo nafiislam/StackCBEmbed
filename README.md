@@ -25,7 +25,6 @@ numpy==1.26.2
 pandas==2.1.4
 matplotlib
 PyQt5==5.15.10
-numpy==1.26.2
 imblearn==0.0
 <br />
 **OS used during running:**  Pop!_OS 22.04 
