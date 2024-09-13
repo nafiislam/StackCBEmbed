@@ -132,12 +132,12 @@ def find_metrics(y_predict, y_proba, y_test):
 
 
 feature_paths = {
-    'PSSM': './all_required_csvs/TS53_with_PSSM.csv',
-    'ProtT5-XL-UniRef50': './all_required_csvs/TS53_embeddings.csv',
+    'PSSM': './all_required_csvs/TS46_with_PSSM.csv',
+    'ProtT5-XL-UniRef50': './all_required_csvs/TS46_embeddings.csv',
 }
 
 cmds = ['2', '0', '1']
-with open('./output_csvs/metrics_TS53.csv', 'w') as f:
+with open('./output_csvs/metrics_TS46.csv', 'w') as f:
     writer = csv.writer(f)
     writer.writerow(['Predictor', 'Sensitivity', 'Specificity', 'Balanced_acc', 'Accuracy', 'F1-score', 'MCC', 'AUC', 'auPR'])
     for cmd in cmds:
