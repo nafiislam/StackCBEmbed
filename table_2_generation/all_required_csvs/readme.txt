@@ -5,3 +5,4 @@ Benchmark_ProtBERT_BFD_embeddings.csv
 Benchmark_Prot_BERT_embeddings.csv
 Benchmark_ProtT5_XL_BFD_embeddings.csv
 Benchmark_Prot_XL_Net_embeddings.csv
+Benchmark_ESM2_embeddings.csv

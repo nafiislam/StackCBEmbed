@@ -167,6 +167,34 @@ for cmd in cmds:
     fprs.append(fpr)
     tprs.append(tpr)
 
+y_proba = pd.read_csv('./prev_paper/capsifg_y_proba_TS88.csv', header=None).values
+fpr, tpr, thresholds = roc_curve(y, y_proba)
+print('fpr : ', fpr)
+print('tpr : ', tpr)
+fprs.append(fpr)
+tprs.append(tpr)
+
+y_proba = pd.read_csv('./prev_paper/capsifv_y_proba_TS88.csv', header=None).values
+fpr, tpr, thresholds = roc_curve(y, y_proba)
+print('fpr : ', fpr)
+print('tpr : ', tpr)
+fprs.append(fpr)
+tprs.append(tpr)
+
+y_proba = pd.read_csv('./prev_paper/ps_s_y_proba_TS88.csv', header=None).values
+fpr, tpr, thresholds = roc_curve(y, y_proba)
+print('fpr : ', fpr)
+print('tpr : ', tpr)
+fprs.append(fpr)
+tprs.append(tpr)
+
+y_proba = pd.read_csv('./prev_paper/ps_g_y_proba_TS88.csv', header=None).values
+fpr, tpr, thresholds = roc_curve(y, y_proba)
+print('fpr : ', fpr)
+print('tpr : ', tpr)
+fprs.append(fpr)
+tprs.append(tpr)
+
 file_path = str('./StackCBPred/feature_file_train_ws1.csv')
 train_df_1 = pd.read_csv(file_path, header=None)
 train_1 = train_df_1.values
@@ -253,11 +281,18 @@ tprs.append(tpr)
 
 print(fprs)
 print(tprs)
+# Diagonal reference line
 plt.plot([0.0, 1.0], [0.0, 1.0], color="darkblue", linestyle='--')
-plt.plot(fprs[0], tprs[0], color="cornflowerblue", label='StackCBEmbed (PSSM)')
-plt.plot(fprs[1], tprs[1], color="orange", label='StackCBEmbed (Embedding)')
-plt.plot(fprs[2], tprs[2], color="limegreen", label='StackCBEmbed')
-plt.plot(fprs[3], tprs[3], color="red", label='StackCBPred')
+
+# Plotting with distinguishable colors and line styles
+plt.plot(fprs[7], tprs[7], color="deeppink", linewidth=2, label='StackCBPred')
+plt.plot(fprs[6], tprs[6], color="black", linewidth=2, label='PS-G')
+plt.plot(fprs[5], tprs[5], color="saddlebrown", linewidth=2, label='PS-S')
+plt.plot(fprs[3], tprs[3], color="firebrick", linewidth=2, label='CAPSIF-G')
+plt.plot(fprs[4], tprs[4], color="royalblue", linewidth=2, label='CAPSIF-V')
+plt.plot(fprs[0], tprs[0], color="darkviolet", linewidth=2, label='StackCBEmbed (PSSM)')
+plt.plot(fprs[1], tprs[1], color="gold", linewidth=2, label='StackCBEmbed (Embedding)')
+plt.plot(fprs[2], tprs[2], color="forestgreen", linewidth=2, label='StackCBEmbed')
 plt.title('Receiver operating characteristic curve (TS-88)')
 plt.xlabel('False Positive Rate')
 plt.ylabel('True Positive Rate')

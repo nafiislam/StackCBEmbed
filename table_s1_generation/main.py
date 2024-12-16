@@ -52,7 +52,6 @@ def preprocess_the_dataset(feature_X):
     return feature_X
 
 
-
 def find_metrics(model_name, y_test):
     if model_name == 'RF':
         model = RandomForestClassifier(random_state=1)
@@ -61,7 +60,7 @@ def find_metrics(model_name, y_test):
     elif model_name == 'DT':
         model = DecisionTreeClassifier(random_state=1)
     elif model_name == 'MLP':
-        model = MLPClassifier(random_state=1)
+        model = MLPClassifier(random_state=1, max_iter=4000)
     elif model_name == 'LR':
         model = LogisticRegression(class_weight='balanced', random_state=1, max_iter=1000)
     elif model_name == 'SVM':
@@ -73,7 +72,7 @@ def find_metrics(model_name, y_test):
     elif model_name == 'XGB':
         model = XGBClassifier(random_state=1)
     elif model_name == 'PLS':
-        model = PLSRegression(n_components=2)
+         model = PLSRegression(n_components=2)
     else:
         print('Wrong model name')
         return
@@ -81,9 +80,8 @@ def find_metrics(model_name, y_test):
     try:
         model.fit(X_train, y_train)
     except:
-        if model_name == 'PLS':
-            model = PLSRegression(n_components=1)
-            model.fit(X_train, y_train)
+        model = PLSRegression(n_components=1)
+        model.fit(X_train, y_train)
 
     if model_name == 'PLS':
         y_predict = []
@@ -108,8 +106,16 @@ def find_metrics(model_name, y_test):
 
     bal_acc = balanced_accuracy_score(y_test, y_predict)
     acc = accuracy_score(y_test, y_predict)
-    prec = tp / (tp + fp)
-    f1_score_1 = 2 * prec * sensitivity / (prec + sensitivity)
+
+    if tp == 0 and fp == 0:
+        prec = 0
+    else:
+        prec = tp / (tp + fp)
+
+    if prec == 0 and sensitivity == 0:
+        f1_score_1 = 0
+    else:
+        f1_score_1 = 2 * prec * sensitivity / (prec + sensitivity)
     mcc = matthews_corrcoef(y_test, y_predict)
     auc = roc_auc_score(y_test, y_proba[:, 1])
     auPR = average_precision_score(y_test, y_proba[:, 1])  # auPR
@@ -117,29 +123,62 @@ def find_metrics(model_name, y_test):
     return sensitivity, specificity, bal_acc, acc, prec, f1_score_1, mcc, auc, auPR
 
 
-embeddings = {
+def make_string(s):
+    str = ''
+    for i in s:
+        str += i + ", "
+    return str[:-2]
+
+
+feature_paths = {
+    'PSSM': './all_required_csvs/Benchmark_with_PSSM.csv',
+    'MonoGram': './all_required_csvs/Benchmark_with_monogram.csv',
+    'DPC': './all_required_csvs/Benchmark_with_DPC.csv',
+    'ASA': './all_required_csvs/Benchmark_with_ASA.csv',
+    'HSE': './all_required_csvs/Benchmark_with_HSE.csv',
+    'torsion_angles': './all_required_csvs/Benchmark_with_torsion_angles.csv',
+    'Physicochemical': './all_required_csvs/Benchmark_with_physicochemical.csv',
     'ProtT5-XL-UniRef50': './all_required_csvs/benchmark_embeddings.csv',
-    'Prot-BERT': './all_required_csvs/Benchmark_Prot_BERT_embeddings.csv',
-    'ProtBERT-BFD': './all_required_csvs/Benchmark_ProtBERT_BFD_embeddings.csv',
-    'ProtT5-XL-BFD': './all_required_csvs/Benchmark_ProtT5_XL_BFD_embeddings.csv',
-    'ProtT5-XL-Net': './all_required_csvs/Benchmark_Prot_XL_Net_embeddings.csv',
-    'Prot-Albert': './all_required_csvs/Benchmark_Prot_Albert_embeddings.csv',
-    'ESM2': './all_required_csvs/Benchmark_ESM2_embeddings.csv',
 }
 
-with open('./output_csvs/language_model_wise_benchmark_results.csv', 'w') as f1:
-    language_model_wise_benchmark_results_csv = csv.writer(f1)
+feature_sets = [['PSSM'], ['MonoGram'], ['DPC'], ['ASA'], ['HSE'], ['torsion_angles'], ['Physicochemical'], ['ProtT5-XL-UniRef50'],
+                ['ProtT5-XL-UniRef50', 'PSSM'], ['ProtT5-XL-UniRef50', 'MonoGram'], ['ProtT5-XL-UniRef50', 'DPC'], ['ProtT5-XL-UniRef50', 'ASA'], ['ProtT5-XL-UniRef50', 'HSE'], ['ProtT5-XL-UniRef50', 'torsion_angles'], ['ProtT5-XL-UniRef50', 'Physicochemical'],
+                ['ProtT5-XL-UniRef50', 'PSSM', 'MonoGram'], ['ProtT5-XL-UniRef50', 'PSSM', 'DPC'], ['ProtT5-XL-UniRef50', 'PSSM', 'ASA'], ['ProtT5-XL-UniRef50', 'PSSM', 'HSE'], ['ProtT5-XL-UniRef50', 'PSSM', 'torsion_angles'], ['ProtT5-XL-UniRef50', 'PSSM', 'Physicochemical'],
+                ['ProtT5-XL-UniRef50', 'PSSM','torsion_angles', 'MonoGram'], ['ProtT5-XL-UniRef50', 'PSSM','torsion_angles', 'DPC'], ['ProtT5-XL-UniRef50', 'PSSM','torsion_angles', 'ASA'], ['ProtT5-XL-UniRef50', 'PSSM','torsion_angles', 'HSE'], ['ProtT5-XL-UniRef50', 'PSSM','torsion_angles', 'Physicochemical'],
+                ['ProtT5-XL-UniRef50', 'PSSM','torsion_angles', 'MonoGram', 'DPC'], ['ProtT5-XL-UniRef50', 'PSSM','torsion_angles', 'MonoGram', 'ASA'], ['ProtT5-XL-UniRef50', 'PSSM','torsion_angles', 'MonoGram', 'HSE'], ['ProtT5-XL-UniRef50', 'PSSM','torsion_angles', 'MonoGram', 'Physicochemical'],
+                ['ProtT5-XL-UniRef50', 'PSSM','torsion_angles', 'MonoGram', 'DPC', 'ASA'], ['ProtT5-XL-UniRef50', 'PSSM','torsion_angles', 'MonoGram', 'DPC', 'HSE'], ['ProtT5-XL-UniRef50', 'PSSM','torsion_angles', 'MonoGram', 'DPC', 'Physicochemical'],
+                ['ProtT5-XL-UniRef50', 'PSSM','torsion_angles', 'MonoGram', 'DPC', 'ASA', 'HSE'], ['ProtT5-XL-UniRef50', 'PSSM','torsion_angles', 'MonoGram', 'DPC', 'ASA', 'Physicochemical'],
+                ['ProtT5-XL-UniRef50', 'PSSM','torsion_angles', 'MonoGram', 'DPC', 'ASA', 'HSE', 'Physicochemical']
+                ]
 
-    language_model_wise_benchmark_results_csv.writerow(['Language Model', 'Sensitivity', 'Specificity', 'Balanced Accuracy', 'Accuracy', 'Precision', 'F1-score', 'MCC', 'AUC', 'auPR'])
 
-    for embedding in embeddings:
-        print(embedding)
+with open('./output_csvs/feature_wise_benchmark_results.csv', 'w') as f1:
+    feature_wise_benchmark_results_csv = csv.writer(f1)
+
+    feature_wise_benchmark_results_csv.writerow(['Feature set', 'Sensitivity', 'Specificity', 'Balanced Accuracy', 'Accuracy', 'Precision', 'F1-score', 'MCC', 'AUC', 'auPR'])
+
+    for features in feature_sets:
+        print(make_string(features))
         random.seed(1)
 
-        file_path_Benchmark_embeddings = embeddings[embedding]
-        D_feature = pd.read_csv(file_path_Benchmark_embeddings, header=None)
-        feature_X_Benchmark_embeddings = D_feature.iloc[:, 1:].values
+        file_path_Benchmark_embeddings = feature_paths['ProtT5-XL-UniRef50']
+        D_feature = pd.read_csv(file_path_Benchmark_embeddings, header=None, low_memory=False)
         feature_y_Benchmark_embeddings = D_feature.iloc[:, 0].values
+
+        feature_X_Benchmark_embeddings = np.zeros((feature_y_Benchmark_embeddings.shape[0], 1), dtype=float)
+        for feature in features:
+            if feature == 'ProtT5-XL-UniRef50':
+                file_path_Benchmark_embeddings = feature_paths[feature]
+                D_feature = pd.read_csv(file_path_Benchmark_embeddings, header=None, low_memory=False)
+                feature_X_Benchmark_embeddings = np.concatenate((feature_X_Benchmark_embeddings, D_feature.iloc[:, 1:].values), axis=1)
+            else:
+                file_path_Benchmark_embeddings = feature_paths[feature]
+                D_feature = pd.read_csv(file_path_Benchmark_embeddings, header=None, low_memory=False)
+                feature_X_Benchmark_embeddings = np.concatenate((feature_X_Benchmark_embeddings, D_feature.iloc[1:, 2:].values), axis=1)
+
+        feature_X_Benchmark_embeddings = np.delete(feature_X_Benchmark_embeddings, 0, axis=1)
+
+
         print(feature_X_Benchmark_embeddings.shape)
         print(feature_y_Benchmark_embeddings.shape)
 
@@ -170,7 +209,7 @@ with open('./output_csvs/language_model_wise_benchmark_results.csv', 'w') as f1:
         global_MCC = []
         global_AUC = []
 
-        all_model_name = ['RF', 'ET', 'DT', 'MLP', 'LR', 'SVM', 'NB', 'KNN', 'XGB', 'PLS']
+        all_model_name = ['XGB']
 
         for model_name in all_model_name:
             local_Sensitivity = []
@@ -231,7 +270,7 @@ with open('./output_csvs/language_model_wise_benchmark_results.csv', 'w') as f1:
             print('___________________________________________________________________________________________________________')
             print('___________________________________________________________________________________________________________')
 
-        language_model_wise_benchmark_results_csv.writerow([embedding, '{0:.3f}'.format(np.mean(global_Sensitivity)),'{0:.3f}'.format(np.mean(global_Specificity)),'{0:.3f}'.format(np.mean(global_Balanced_acc)), '{0:.3f}'.format(np.mean(global_Accuracy)), '{0:.3f}'.format(np.mean(global_Precision)), '{0:.3f}'.format(np.mean(global_F1)), '{0:.3f}'.format(np.mean(global_MCC)), '{0:.3f}'.format(np.mean(global_AUC)), '{0:.3f}'.format(np.mean(global_AUPR))])
+        feature_wise_benchmark_results_csv.writerow([make_string(features), '{0:.3f}'.format(np.mean(global_Sensitivity)), '{0:.3f}'.format(np.mean(global_Specificity)), '{0:.3f}'.format(np.mean(global_Balanced_acc)), '{0:.3f}'.format(np.mean(global_Accuracy)), '{0:.3f}'.format(np.mean(global_Precision)), '{0:.3f}'.format(np.mean(global_F1)), '{0:.3f}'.format(np.mean(global_MCC)), '{0:.3f}'.format(np.mean(global_AUC)), '{0:.3f}'.format(np.mean(global_AUPR))])
         print('___________________________________________________________________________________________________________')
         print('___________________________________________________________________________________________________________')
         print('___________________________________________________________________________________________________________')

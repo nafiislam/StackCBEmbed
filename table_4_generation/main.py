@@ -1,37 +1,21 @@
 import pandas as pd
 import numpy as np
-from sklearn.svm import SVC
-from sklearn.utils import shuffle
-from sklearn.metrics import matthews_corrcoef
-from sklearn.model_selection import KFold
-from sklearn.metrics import accuracy_score,confusion_matrix,roc_auc_score,f1_score,matthews_corrcoef,average_precision_score
+from imblearn.under_sampling import RandomUnderSampler
 
 # import the classifiers :
-import math
 from sklearn.linear_model import LogisticRegression
 from sklearn.neighbors import KNeighborsClassifier
-from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import ExtraTreesClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import SVC
-from sklearn.linear_model import TweedieRegressor
 from sklearn.neural_network import MLPClassifier
 from sklearn.tree import DecisionTreeClassifier
 
-from imblearn.under_sampling import RandomUnderSampler
-from random import sample
-from imblearn.over_sampling import SMOTE
 from sklearn.model_selection import train_test_split
 
-from collections import Counter
-from sklearn.metrics import balanced_accuracy_score
-
-from sklearn.feature_selection import SelectFromModel
 from xgboost import XGBClassifier
 from sklearn.cross_decomposition import PLSRegression
 from sklearn.naive_bayes import GaussianNB
-from sklearn.preprocessing import MinMaxScaler
-from imblearn.under_sampling import RandomUnderSampler
 
 import random
 import pickle
@@ -41,6 +25,8 @@ from sklearn.preprocessing import PowerTransformer
 from sklearn.preprocessing import KBinsDiscretizer
 
 from sklearn.model_selection import StratifiedKFold
+from sklearn.feature_selection import mutual_info_classif
+from collections import Counter
 
 
 def preprocess_the_dataset(feature_X):
@@ -52,7 +38,7 @@ def preprocess_the_dataset(feature_X):
     return feature_X
 
 
-def find_metrics(model_name, y_test):
+def model_fit(model_name, X_train, y_train):
     if model_name == 'RF':
         model = RandomForestClassifier(random_state=1)
     elif model_name == 'ET':
@@ -72,7 +58,7 @@ def find_metrics(model_name, y_test):
     elif model_name == 'XGB':
         model = XGBClassifier(random_state=1)
     elif model_name == 'PLS':
-         model = PLSRegression(n_components=2)
+        model = PLSRegression(n_components=2)
     else:
         print('Wrong model name')
         return
@@ -83,44 +69,7 @@ def find_metrics(model_name, y_test):
         model = PLSRegression(n_components=1)
         model.fit(X_train, y_train)
 
-    if model_name == 'PLS':
-        y_predict = []
-        for item in model.predict(X_test):
-            if (item < 1.5):
-                y_predict.append(np.round(np.abs(item[0])))
-            else:
-                y_predict.append(1)
-
-        p_all = []
-        p_all.append([1 - np.abs(item[0]) for item in model.predict(X_test)])
-        p_all.append([np.abs(item[0]) for item in model.predict(X_test)])
-        y_proba = np.transpose(np.array(p_all))
-    else:
-        y_predict = model.predict(X_test)  # predicted labels
-        y_proba = model.predict_proba(X_test)
-
-    tn, fp, fn, tp = confusion_matrix(y_test, y_predict).ravel()  # y_true, y_pred
-
-    sensitivity = tp / (tp + fn)
-    specificity = tn / (tn + fp)
-
-    bal_acc = balanced_accuracy_score(y_test, y_predict)
-    acc = accuracy_score(y_test, y_predict)
-
-    if tp == 0 and fp == 0:
-        prec = 0
-    else:
-        prec = tp / (tp + fp)
-
-    if prec == 0 and sensitivity == 0:
-        f1_score_1 = 0
-    else:
-        f1_score_1 = 2 * prec * sensitivity / (prec + sensitivity)
-    mcc = matthews_corrcoef(y_test, y_predict)
-    auc = roc_auc_score(y_test, y_proba[:, 1])
-    auPR = average_precision_score(y_test, y_proba[:, 1])  # auPR
-
-    return sensitivity, specificity, bal_acc, acc, prec, f1_score_1, mcc, auc, auPR
+    return model
 
 
 def make_string(s):
@@ -141,136 +90,116 @@ feature_paths = {
     'ProtT5-XL-UniRef50': './all_required_csvs/benchmark_embeddings.csv',
 }
 
-feature_sets = [['PSSM'], ['MonoGram'], ['DPC'], ['ASA'], ['HSE'], ['torsion_angles'], ['Physicochemical'], ['ProtT5-XL-UniRef50'],
-                ['ProtT5-XL-UniRef50', 'PSSM'], ['ProtT5-XL-UniRef50', 'MonoGram'], ['ProtT5-XL-UniRef50', 'DPC'], ['ProtT5-XL-UniRef50', 'ASA'], ['ProtT5-XL-UniRef50', 'HSE'], ['ProtT5-XL-UniRef50', 'torsion_angles'], ['ProtT5-XL-UniRef50', 'Physicochemical'],
-                ['ProtT5-XL-UniRef50', 'PSSM', 'MonoGram'], ['ProtT5-XL-UniRef50', 'PSSM', 'DPC'], ['ProtT5-XL-UniRef50', 'PSSM', 'ASA'], ['ProtT5-XL-UniRef50', 'PSSM', 'HSE'], ['ProtT5-XL-UniRef50', 'PSSM', 'torsion_angles'], ['ProtT5-XL-UniRef50', 'PSSM', 'Physicochemical'],
-                ['ProtT5-XL-UniRef50', 'PSSM','torsion_angles', 'MonoGram'], ['ProtT5-XL-UniRef50', 'PSSM','torsion_angles', 'DPC'], ['ProtT5-XL-UniRef50', 'PSSM','torsion_angles', 'ASA'], ['ProtT5-XL-UniRef50', 'PSSM','torsion_angles', 'HSE'], ['ProtT5-XL-UniRef50', 'PSSM','torsion_angles', 'Physicochemical'],
-                ['ProtT5-XL-UniRef50', 'PSSM','torsion_angles', 'MonoGram', 'DPC'], ['ProtT5-XL-UniRef50', 'PSSM','torsion_angles', 'MonoGram', 'ASA'], ['ProtT5-XL-UniRef50', 'PSSM','torsion_angles', 'MonoGram', 'HSE'], ['ProtT5-XL-UniRef50', 'PSSM','torsion_angles', 'MonoGram', 'Physicochemical'],
-                ['ProtT5-XL-UniRef50', 'PSSM','torsion_angles', 'MonoGram', 'DPC', 'ASA'], ['ProtT5-XL-UniRef50', 'PSSM','torsion_angles', 'MonoGram', 'DPC', 'HSE'], ['ProtT5-XL-UniRef50', 'PSSM','torsion_angles', 'MonoGram', 'DPC', 'Physicochemical'],
-                ['ProtT5-XL-UniRef50', 'PSSM','torsion_angles', 'MonoGram', 'DPC', 'ASA', 'HSE'], ['ProtT5-XL-UniRef50', 'PSSM','torsion_angles', 'MonoGram', 'DPC', 'ASA', 'Physicochemical'],
-                ['ProtT5-XL-UniRef50', 'PSSM','torsion_angles', 'MonoGram', 'DPC', 'ASA', 'HSE', 'Physicochemical']
-                ]
+learner_combination = [
+    ['XGB'], ['NB'], ['KNN'], ['LR'], ['PLS'], ['SVM'], ['MLP'], ['DT'], ['RF'], ['ET'],
+    ['SVM', 'NB'], ['SVM', 'KNN'], ['SVM', 'LR'], ['SVM', 'PLS'], ['SVM', 'MLP'], ['SVM', 'DT'], ['SVM', 'RF'], ['SVM', 'ET'], ['SVM', 'XGB'],
+    ['SVM', 'MLP', 'NB'], ['SVM', 'MLP', 'KNN'], ['SVM', 'MLP', 'LR'], ['SVM', 'MLP', 'PLS'], ['SVM', 'MLP', 'DT'], ['SVM', 'MLP', 'RF'], ['SVM', 'MLP', 'ET'], ['SVM', 'MLP', 'XGB'],
+    ['SVM', 'MLP', 'RF', 'NB'], ['SVM', 'MLP', 'RF', 'KNN'], ['SVM', 'MLP', 'RF', 'LR'], ['SVM', 'MLP', 'RF', 'PLS'], ['SVM', 'MLP', 'RF', 'DT'], ['SVM', 'MLP', 'RF', 'ET'], ['SVM', 'MLP', 'RF', 'XGB'],
+    ['SVM', 'MLP', 'ET', 'NB'], ['SVM', 'MLP', 'ET', 'KNN'], ['SVM', 'MLP', 'ET', 'LR'], ['SVM', 'MLP', 'ET', 'PLS'], ['SVM', 'MLP', 'ET', 'DT'], ['SVM', 'MLP', 'ET', 'RF'], ['SVM', 'MLP', 'ET', 'XGB'],
+    ['SVM', 'MLP', 'ET', 'PLS', 'NB'], ['SVM', 'MLP', 'ET', 'PLS', 'KNN'], ['SVM', 'MLP', 'ET', 'PLS', 'LR'], ['SVM', 'MLP', 'ET', 'PLS', 'DT'], ['SVM', 'MLP', 'ET', 'PLS', 'RF'], ['SVM', 'MLP', 'ET', 'PLS', 'XGB'],
+    ['SVM', 'MLP', 'ET', 'PLS', 'RF', 'NB'], ['SVM', 'MLP', 'ET', 'PLS', 'RF', 'KNN'], ['SVM', 'MLP', 'ET', 'PLS', 'RF', 'LR'], ['SVM', 'MLP', 'ET', 'PLS', 'RF', 'DT'], ['SVM', 'MLP', 'ET', 'PLS', 'RF', 'XGB'],
+    ['SVM', 'MLP', 'ET', 'PLS', 'RF', 'KNN', 'NB'], ['SVM', 'MLP', 'ET', 'PLS', 'RF', 'KNN', 'LR'], ['SVM', 'MLP', 'ET', 'PLS', 'RF', 'KNN', 'DT'], ['SVM', 'MLP', 'ET', 'PLS', 'RF', 'KNN', 'XGB'],
+    ['SVM', 'MLP', 'ET', 'PLS', 'RF', 'KNN', 'LR', 'NB'], ['SVM', 'MLP', 'ET', 'PLS', 'RF', 'KNN', 'LR', 'DT'], ['SVM', 'MLP', 'ET', 'PLS', 'RF', 'KNN', 'LR', 'XGB'],
+    ['SVM', 'MLP', 'ET', 'PLS', 'RF', 'KNN', 'LR', 'NB', 'DT'], ['SVM', 'MLP', 'ET', 'PLS', 'RF', 'KNN', 'LR', 'NB', 'XGB'],
+    ['SVM', 'MLP', 'ET', 'PLS', 'RF', 'KNN', 'LR', 'NB', 'DT', 'XGB'],
+    ['SVM', 'MLP', 'RF', 'KNN', 'NB'], ['SVM', 'MLP', 'RF', 'KNN', 'LR'], ['SVM', 'MLP', 'RF', 'KNN', 'PLS'], ['SVM', 'MLP', 'RF', 'KNN', 'DT'],['SVM', 'MLP', 'RF', 'KNN', 'ET'], ['SVM', 'MLP', 'RF', 'KNN', 'XGB'],
+    ['SVM', 'MLP', 'RF', 'KNN', 'XGB', 'NB'], ['SVM', 'MLP', 'RF', 'KNN', 'XGB', 'LR'], ['SVM', 'MLP', 'RF', 'KNN', 'XGB', 'PLS'], ['SVM', 'MLP', 'RF', 'KNN', 'XGB', 'DT'], ['SVM', 'MLP', 'RF', 'KNN', 'XGB', 'ET'],
+    ['SVM', 'MLP', 'RF', 'KNN', 'XGB', 'ET', 'NB'], ['SVM', 'MLP', 'RF', 'KNN', 'XGB', 'ET', 'LR'], ['SVM', 'MLP', 'RF', 'KNN', 'XGB', 'ET', 'PLS'], ['SVM', 'MLP', 'RF', 'KNN', 'XGB', 'ET', 'DT'],
+    ['SVM', 'MLP', 'RF', 'KNN', 'XGB', 'ET', 'NB', 'LR'], ['SVM', 'MLP', 'RF', 'KNN', 'XGB', 'ET', 'NB', 'PLS'], ['SVM', 'MLP', 'RF', 'KNN', 'XGB', 'ET', 'NB', 'DT'],
+    ['SVM', 'MLP', 'RF', 'KNN', 'XGB', 'ET', 'NB', 'LR', 'PLS'], ['SVM', 'MLP', 'RF', 'KNN', 'XGB', 'ET', 'NB', 'LR', 'DT'],
+    ['SVM', 'MLP', 'RF', 'KNN', 'XGB', 'ET', 'NB', 'PLS', 'LR'], ['SVM', 'MLP', 'RF', 'KNN', 'XGB', 'ET', 'NB', 'PLS', 'DT'],
+    ['SVM', 'MLP', 'RF', 'KNN', 'XGB', 'ET', 'NB', 'PLS', 'LR', 'DT'],
+]
+others = ['PSSM']
+file_path_Benchmark_embeddings = feature_paths['ProtT5-XL-UniRef50']
+D_feature = pd.read_csv(file_path_Benchmark_embeddings, header=None, low_memory=False)
+feature_y_Benchmark_embeddings = D_feature.iloc[:, 0].values
+
+feature_X_Benchmark_embeddings = np.zeros((feature_y_Benchmark_embeddings.shape[0], 1), dtype=float)
+
+file_path_Benchmark_embeddings = feature_paths['ProtT5-XL-UniRef50']
+D_feature = pd.read_csv(file_path_Benchmark_embeddings, header=None, low_memory=False)
+feature_X_Benchmark_embeddings = np.concatenate((feature_X_Benchmark_embeddings, D_feature.iloc[:, 0:].values), axis=1)
+
+for other in others:
+    file_path_Benchmark_embeddings = feature_paths[other]
+    D_feature = pd.read_csv(file_path_Benchmark_embeddings, header=None, low_memory=False)
+    feature_X_Benchmark_embeddings = np.concatenate((feature_X_Benchmark_embeddings, D_feature.iloc[1:, 2:].values), axis=1)
+
+feature_X_Benchmark_embeddings = np.delete(feature_X_Benchmark_embeddings, 0, axis=1)
+
+feature_X_Benchmark_embeddings_positive = feature_X_Benchmark_embeddings[feature_X_Benchmark_embeddings[:, 0] == 1, 1:]
+feature_y_Benchmark_embeddings_positive = feature_X_Benchmark_embeddings[feature_X_Benchmark_embeddings[:, 0] == 1, 0].astype('int')
+
+feature_X_Benchmark_embeddings_negative = feature_X_Benchmark_embeddings[feature_X_Benchmark_embeddings[:, 0] == 0, 1:]
+feature_y_Benchmark_embeddings_negative = feature_X_Benchmark_embeddings[feature_X_Benchmark_embeddings[:, 0] == 0, 0].astype('int')
+
+print(feature_X_Benchmark_embeddings_positive.shape)
+print(feature_y_Benchmark_embeddings_positive.shape)
+
+print(feature_X_Benchmark_embeddings_negative.shape)
+print(feature_y_Benchmark_embeddings_negative.shape)
+
+feature_X_Benchmark_embeddings_positive_train, feature_X_Benchmark_embeddings_positive_test, feature_y_Benchmark_embeddings_positive_train, feature_y_Benchmark_embeddings_positive_test = train_test_split(feature_X_Benchmark_embeddings_positive, feature_y_Benchmark_embeddings_positive, test_size=275, random_state=1)
+feature_X_Benchmark_embeddings_negative_train, feature_X_Benchmark_embeddings_negative_test, feature_y_Benchmark_embeddings_negative_train, feature_y_Benchmark_embeddings_negative_test = train_test_split(feature_X_Benchmark_embeddings_negative, feature_y_Benchmark_embeddings_negative, test_size=7741, random_state=1)
+
+print(feature_X_Benchmark_embeddings_positive_train.shape)
+print(feature_X_Benchmark_embeddings_positive_test.shape)
+
+print(feature_X_Benchmark_embeddings_negative_train.shape)
+print(feature_X_Benchmark_embeddings_negative_test.shape)
+
+feature_X_Benchmark_embeddings_train = np.concatenate((feature_X_Benchmark_embeddings_positive_train, feature_X_Benchmark_embeddings_negative_train), axis=0)
+feature_y_Benchmark_embeddings_train = np.concatenate((feature_y_Benchmark_embeddings_positive_train, feature_y_Benchmark_embeddings_negative_train), axis=0)
+feature_X_Benchmark_embeddings_test = np.concatenate((feature_X_Benchmark_embeddings_positive_test, feature_X_Benchmark_embeddings_negative_test), axis=0)
+feature_y_Benchmark_embeddings_test = np.concatenate((feature_y_Benchmark_embeddings_positive_test, feature_y_Benchmark_embeddings_negative_test), axis=0)
+
+print(feature_X_Benchmark_embeddings_train.shape)
+print(feature_y_Benchmark_embeddings_train.shape)
+
+print(feature_X_Benchmark_embeddings_test.shape)
+print(feature_y_Benchmark_embeddings_test.shape)
+
+feature_X_Benchmark_embeddings_train = preprocess_the_dataset(feature_X_Benchmark_embeddings_train)
+feature_X_Benchmark_embeddings_test = preprocess_the_dataset(feature_X_Benchmark_embeddings_test)
+
+X = feature_X_Benchmark_embeddings_train.copy()
+y = feature_y_Benchmark_embeddings_train.copy()
+
+rus = RandomUnderSampler(random_state=1)
+X, y = rus.fit_resample(X, y)
+
+c = Counter(y)
+print(c)
+
+probabilities = {}
+model_names = ['XGB', 'NB', 'KNN', 'LR', 'PLS', 'SVM', 'MLP', 'DT', 'RF', 'ET']
+for model_name in model_names:
+    print(model_name+" model fit is running")
+    if model_name == 'PLS':
+        model = model_fit(model_name, X, y)
+        p_all = []
+        p_all.append([1 - np.abs(item[0]) for item in model.predict(feature_X_Benchmark_embeddings_test)])
+        p_all.append([np.abs(item[0]) for item in model.predict(feature_X_Benchmark_embeddings_test)])
+        probabilities[model_name] = np.transpose(np.array(p_all))[:, 1].reshape(-1, 1)
+    else:
+        model = model_fit(model_name, X, y)
+        probabilities[model_name] = model.predict_proba(feature_X_Benchmark_embeddings_test)[:, 1].reshape(-1, 1)
 
 
-with open('./output_csvs/feature_wise_benchmark_results.csv', 'w') as f1:
-    feature_wise_benchmark_results_csv = csv.writer(f1)
+with open('./output_csvs/model_wise_MI.csv', 'w', newline='') as file:
+    writer = csv.writer(file)
+    writer.writerow(["Learner Combination", "MI"])
+    for learners in learner_combination:
+        print(make_string(learners))
+        prob = np.zeros((feature_X_Benchmark_embeddings_test.shape[0], 1), dtype=float)
+        for learner in learners:
+            prob = np.concatenate((prob, probabilities[learner]), axis=1)
+        prob = np.delete(prob, 0, axis=1)
 
-    feature_wise_benchmark_results_csv.writerow(['Feature set', 'Sensitivity', 'Specificity', 'Balanced Accuracy', 'Accuracy', 'Precision', 'F1-score', 'MCC', 'AUC', 'auPR'])
-
-    for features in feature_sets:
-        print(make_string(features))
-        random.seed(1)
-
-        file_path_Benchmark_embeddings = feature_paths['ProtT5-XL-UniRef50']
-        D_feature = pd.read_csv(file_path_Benchmark_embeddings, header=None, low_memory=False)
-        feature_y_Benchmark_embeddings = D_feature.iloc[:, 0].values
-
-        feature_X_Benchmark_embeddings = np.zeros((feature_y_Benchmark_embeddings.shape[0], 1), dtype=float)
-        for feature in features:
-            if feature == 'ProtT5-XL-UniRef50':
-                file_path_Benchmark_embeddings = feature_paths[feature]
-                D_feature = pd.read_csv(file_path_Benchmark_embeddings, header=None, low_memory=False)
-                feature_X_Benchmark_embeddings = np.concatenate((feature_X_Benchmark_embeddings, D_feature.iloc[:, 1:].values), axis=1)
-            else:
-                file_path_Benchmark_embeddings = feature_paths[feature]
-                D_feature = pd.read_csv(file_path_Benchmark_embeddings, header=None, low_memory=False)
-                feature_X_Benchmark_embeddings = np.concatenate((feature_X_Benchmark_embeddings, D_feature.iloc[1:, 2:].values), axis=1)
-
-        feature_X_Benchmark_embeddings = np.delete(feature_X_Benchmark_embeddings, 0, axis=1)
-
-
-        print(feature_X_Benchmark_embeddings.shape)
-        print(feature_y_Benchmark_embeddings.shape)
-
-        feature_X_Benchmark = feature_X_Benchmark_embeddings.copy()
-
-        preprocessed_feature_X_Benchmark = preprocess_the_dataset(feature_X_Benchmark)
-        feature_y_Benchmark = feature_y_Benchmark_embeddings.copy()
-
-        # Step 06 : Spliting with 10-FCV :
-        cv = StratifiedKFold(n_splits=10, shuffle=True, random_state=1)
-
-        # balance the dataset :
-        rus = RandomUnderSampler(random_state=1)
-        X, y = rus.fit_resample(preprocessed_feature_X_Benchmark, feature_y_Benchmark)
-
-        c = Counter(y)
-        print(c)
-
-        # other classifiers except PLS :
-
-        global_Sensitivity = []
-        global_Specificity = []
-        global_Balanced_acc = []
-        global_Accuracy = []
-        global_Precision = []
-        global_AUPR = []
-        global_F1 = []
-        global_MCC = []
-        global_AUC = []
-
-        all_model_name = ['XGB']
-
-        for model_name in all_model_name:
-            local_Sensitivity = []
-            local_Specificity = []
-            local_Balanced_acc = []
-            local_Accuracy = []
-            local_Precision = []
-            local_AUPR = []
-            local_F1 = []
-            local_MCC = []
-            local_AUC = []
-
-            i = 1
-            for train_index, test_index in cv.split(X, y):
-                X_train = X[train_index]
-                X_test = X[test_index]
-
-                y_train = y[train_index]
-                y_test = y[test_index]
-
-                sensitivity, specificity, bal_acc, acc, prec, f1_score_1, mcc, auc, auPR = find_metrics(model_name, y_test)
-
-                local_Sensitivity.append(sensitivity)
-                local_Specificity.append(specificity)
-                local_Balanced_acc.append(bal_acc)
-                local_Accuracy.append(acc)
-                local_Precision.append(prec)
-                local_F1.append(f1_score_1)
-                local_MCC.append(mcc)
-                local_AUC.append(auc)
-                local_AUPR.append(auPR)
-
-                print(i, 'th iteration done')
-                i = i + 1
-                print('___________________________________________________________________________________________________________')
-
-            print('classifier : ', model_name)
-            print('Sensitivity : {0:.3f}'.format(np.mean(local_Sensitivity)))
-            print('Specificity : {0:.3f}'.format(np.mean(local_Specificity)))
-            print('Balanced_acc : {0:.3f}'.format(np.mean(local_Balanced_acc)))
-            print('Accuracy : {0:.3f}'.format(np.mean(local_Accuracy)))
-            print('Precision : {0:.3f}'.format(np.mean(local_Precision)))
-            print('F1-score: {0:.3f}'.format(np.mean(local_F1)))
-            print('MCC: {0:.3f}'.format(np.mean(local_MCC)))
-            print('AUC: {0:.3f}'.format(np.mean(local_AUC)))
-            print('auPR: {0:.3f}'.format(np.mean(local_AUPR)))
-
-            global_Sensitivity.append(np.mean(local_Sensitivity))
-            global_Specificity.append(np.mean(local_Specificity))
-            global_Balanced_acc.append(np.mean(local_Balanced_acc))
-            global_Accuracy.append(np.mean(local_Accuracy))
-            global_Precision.append(np.mean(local_Precision))
-            global_AUPR.append(np.mean(local_AUPR))
-            global_F1.append(np.mean(local_F1))
-            global_MCC.append(np.mean(local_MCC))
-            global_AUC.append(np.mean(local_AUC))
-
-            print('___________________________________________________________________________________________________________')
-            print('___________________________________________________________________________________________________________')
-
-        feature_wise_benchmark_results_csv.writerow([make_string(features), '{0:.3f}'.format(np.mean(global_Sensitivity)), '{0:.3f}'.format(np.mean(global_Specificity)), '{0:.3f}'.format(np.mean(global_Balanced_acc)), '{0:.3f}'.format(np.mean(global_Accuracy)), '{0:.3f}'.format(np.mean(global_Precision)), '{0:.3f}'.format(np.mean(global_F1)), '{0:.3f}'.format(np.mean(global_MCC)), '{0:.3f}'.format(np.mean(global_AUC)), '{0:.3f}'.format(np.mean(global_AUPR))])
-        print('___________________________________________________________________________________________________________')
-        print('___________________________________________________________________________________________________________')
-        print('___________________________________________________________________________________________________________')
+        realProb = np.zeros(prob.shape[0], dtype=float)
+        for i in range(prob.shape[0]):
+            realProb[i] = np.mean(prob[i])
+        MI = mutual_info_classif(realProb.reshape(-1, 1), feature_y_Benchmark_embeddings_test, random_state=1)
+        print('{0:.4f}'.format(np.mean(MI)))
+        writer.writerow([make_string(learners), '{0:.4f}'.format(np.mean(MI))])
